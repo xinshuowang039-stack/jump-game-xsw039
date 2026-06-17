@@ -652,6 +652,8 @@ function updatePhysics() {
       highScore = score;
       localStorage.setItem('jump_highscore', highScore);
     }
+    // 无尽模式掉落后积分清零
+    if (gameMode === 'endless') { score = 0; updateUI(); }
     document.getElementById('hint').textContent = gameMode === 'endless' ? '掉了！最高分:'+highScore+' 点击重试' : '掉下去了！点击重试';
     document.getElementById('hint').className = 'hint charging';
     shakeTimer = 15;
