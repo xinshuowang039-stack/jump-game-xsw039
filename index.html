@@ -250,6 +250,67 @@
     border-color: #ff4444;
     color: #ff4444;
   }
+
+  /* 通关弹窗 */
+  .win-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 800px; height: 500px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 25;
+    background: rgba(0,0,0,0.5);
+  }
+  .win-overlay.show { display: flex; }
+  .win-box {
+    position: relative;
+    background: #1a1a2e;
+    border: 4px solid #ffd700;
+    padding: 30px 40px;
+    text-align: center;
+    max-width: 400px;
+  }
+  .win-box .win-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: #ffd700;
+    text-shadow: 2px 2px 0 #000, 0 0 20px #ffd70040;
+    margin-bottom: 14px;
+  }
+  .win-box .win-sub {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #ccc;
+    text-shadow: 1px 1px 0 #000;
+    margin-bottom: 8px;
+  }
+  .win-box .win-btn {
+    margin-top: 18px;
+    padding: 12px 40px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    border: 3px solid #ffd700;
+    background: #2a2a1a;
+    color: #ffd700;
+    cursor: pointer;
+    text-shadow: 1px 1px 0 #000;
+  }
+  .win-box .win-btn:hover {
+    background: #3a3a1a;
+  }
+  /* 小猫表情 */
+  .cat-emoji {
+    position: absolute;
+    font-size: 36px;
+    animation: catBounce 0.6s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 26;
+  }
+  @keyframes catBounce {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(-12px) rotate(5deg); }
+  }
 </style>
 </head>
 <body>
@@ -276,6 +337,16 @@
         <div class="go-score">得分 <span id="goScore">0</span></div>
         <div class="go-score" id="goHigh" style="display:none;">最高 <span id="goHighScore">0</span></div>
         <button class="go-btn" id="goBtn">好的</button>
+      </div>
+    </div>
+    <!-- 小猫表情容器 -->
+    <div id="catContainer"></div>
+    <!-- 通关弹窗 -->
+    <div class="win-overlay" id="winOverlay">
+      <div class="win-box">
+        <div class="win-title">恭喜通关！</div>
+        <div class="win-sub">你通过了全部10关</div>
+        <button class="win-btn" id="winBtn">好的</button>
       </div>
     </div>
     <!-- 设置 -->
@@ -590,6 +661,54 @@ document.getElementById('goBtn').addEventListener('click', (e) => {
   hideGameOverPopup();
   if (gameMode === 'endless') initEndless();
   else initLevel();
+});
+
+// === 通关弹窗（关卡模式全部通关） ===
+const catEmojis = ['😸','😹','😺','😻','😼','😽','😾','😿','🙀','🐱','🐈','🎉','✨','🎊','💖'];
+
+function showWinPopup() {
+  document.getElementById('winOverlay').classList.add('show');
+  spawnCatEmojis();
+}
+
+function hideWinPopup() {
+  document.getElementById('winOverlay').classList.remove('show');
+  clearCatEmojis();
+}
+
+function spawnCatEmojis() {
+  const container = document.getElementById('catContainer');
+  const count = 3 + Math.floor(Math.random() * 5); // 3-7个
+  const winBox = document.querySelector('.win-box');
+  const boxRect = winBox.getBoundingClientRect();
+  const parentRect = winBox.parentElement.getBoundingClientRect();
+
+  for (let i = 0; i < count; i++) {
+    const emoji = document.createElement('span');
+    emoji.className = 'cat-emoji';
+    emoji.textContent = catEmojis[Math.floor(Math.random() * catEmojis.length)];
+    // 随机放在弹窗周围
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 80 + Math.random() * 100;
+    const left = (boxRect.left - parentRect.left) + boxRect.width/2 + Math.cos(angle) * dist - 18;
+    const top = (boxRect.top - parentRect.top) + boxRect.height/2 + Math.sin(angle) * dist - 18;
+    emoji.style.left = left + 'px';
+    emoji.style.top = top + 'px';
+    emoji.style.animationDelay = (i * 0.12) + 's';
+    emoji.style.fontSize = (28 + Math.random() * 28) + 'px';
+    container.appendChild(emoji);
+  }
+}
+
+function clearCatEmojis() {
+  document.getElementById('catContainer').innerHTML = '';
+}
+
+document.getElementById('winBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  hideWinPopup();
+  levelIndex = 0; score = 0;
+  initLevel();
 });
 
 // === 返回菜单 ===
@@ -913,6 +1032,12 @@ document.getElementById('btnLevel').addEventListener('click', (e) => {
 // === 游戏事件 ===
 function handleAction() {
   if (settingsPanel.classList.contains('show')) return;
+  if (document.getElementById('winOverlay').classList.contains('show')) {
+    hideWinPopup();
+    levelIndex = 0; score = 0;
+    initLevel();
+    return;
+  }
   if (gameState === 'waiting') startCharge();
   else if (gameState === 'gameOver') {
     hideGameOverPopup();
@@ -922,8 +1047,8 @@ function handleAction() {
   else if (gameState === 'levelClear') {
     levelIndex++;
     if (levelIndex >= LEVELS.length) {
-      alert('恭喜通关！\n你通过了全部10关！\n点击确定重新开始');
-      levelIndex = 0; score = 0;
+      showWinPopup();
+      return;
     }
     initLevel();
   }
