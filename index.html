@@ -199,6 +199,57 @@
     border-color: #44ff44;
     background: #1a2e1a;
   }
+
+  /* 死亡弹窗 */
+  .gameover-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 800px; height: 500px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 25;
+    background: rgba(0,0,0,0.55);
+  }
+  .gameover-overlay.show { display: flex; }
+  .gameover-box {
+    background: #1a1a1a;
+    border: 4px solid #cc4444;
+    padding: 30px 40px;
+    text-align: center;
+    max-width: 360px;
+  }
+  .gameover-box .go-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: #ff4444;
+    text-shadow: 2px 2px 0 #000;
+    margin-bottom: 14px;
+  }
+  .gameover-box .go-score {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #ccc;
+    text-shadow: 1px 1px 0 #000;
+    margin-bottom: 8px;
+  }
+  .gameover-box .go-score span { color: #ffd700; }
+  .gameover-box .go-btn {
+    margin-top: 18px;
+    padding: 12px 40px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    border: 3px solid #cc4444;
+    background: #2a1a1a;
+    color: #ff6666;
+    cursor: pointer;
+    text-shadow: 1px 1px 0 #000;
+  }
+  .gameover-box .go-btn:hover {
+    background: #3a1a1a;
+    border-color: #ff4444;
+    color: #ff4444;
+  }
 </style>
 </head>
 <body>
@@ -217,6 +268,15 @@
       <div class="menu-subtitle">PIXEL JUMPER</div>
       <button class="menu-btn primary" id="btnEndless">无尽模式</button>
       <button class="menu-btn" id="btnLevel">关卡模式</button>
+    </div>
+    <!-- 死亡弹窗 -->
+    <div class="gameover-overlay" id="gameoverOverlay">
+      <div class="gameover-box">
+        <div class="go-title">你掉了！</div>
+        <div class="go-score">得分 <span id="goScore">0</span></div>
+        <div class="go-score" id="goHigh" style="display:none;">最高 <span id="goHighScore">0</span></div>
+        <button class="go-btn" id="goBtn">好的</button>
+      </div>
     </div>
     <!-- 设置 -->
     <button class="settings-btn" id="settingsBtn" title="灵敏度设置" style="display:none;">⚙</button>
@@ -509,6 +569,29 @@ function startGame(mode) {
   document.getElementById('hint').className = 'hint ready';
 }
 
+// === 死亡弹窗 ===
+function showGameOverPopup() {
+  document.getElementById('goScore').textContent = score;
+  if (gameMode === 'endless') {
+    document.getElementById('goHigh').style.display = 'block';
+    document.getElementById('goHighScore').textContent = highScore;
+  } else {
+    document.getElementById('goHigh').style.display = 'none';
+  }
+  document.getElementById('gameoverOverlay').classList.add('show');
+}
+
+function hideGameOverPopup() {
+  document.getElementById('gameoverOverlay').classList.remove('show');
+}
+
+document.getElementById('goBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  hideGameOverPopup();
+  if (gameMode === 'endless') initEndless();
+  else initLevel();
+});
+
 // === 返回菜单 ===
 function backToMenu() {
   gameMode = 'menu';
@@ -654,6 +737,8 @@ function updatePhysics() {
     }
     // 无尽模式掉落后积分清零
     if (gameMode === 'endless') { score = 0; updateUI(); }
+    // 显示死亡弹窗
+    showGameOverPopup();
     document.getElementById('hint').textContent = gameMode === 'endless' ? '掉了！最高分:'+highScore+' 点击重试' : '掉下去了！点击重试';
     document.getElementById('hint').className = 'hint charging';
     shakeTimer = 15;
@@ -830,6 +915,7 @@ function handleAction() {
   if (settingsPanel.classList.contains('show')) return;
   if (gameState === 'waiting') startCharge();
   else if (gameState === 'gameOver') {
+    hideGameOverPopup();
     if (gameMode === 'endless') initEndless();
     else initLevel();
   }
